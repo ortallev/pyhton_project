@@ -1,0 +1,63 @@
+import cv2
+from matplotlib import pyplot as plt
+import numpy as np
+
+
+def insert(point,all_lines):
+    if point in all_lines:
+        all_lines[point] += 1
+    else:
+        all_lines[point] = 1
+
+def HoughLines(img, angle, threshold):
+    lines = []
+    y_idxs, x_idxs = np.nonzero(img) # return all the index that not zero in the image (mask)
+    thetas = angle * (np.arange(-(np.pi / (angle * 2)), (np.pi / (angle * 2))))
+    cos_t = np.cos(thetas)
+    sin_t = np.sin(thetas)
+
+    accumulator = {}
+    [insert((round(x_idxs[i] * cos_t[t]+ y_idxs[i] * sin_t[t]), thetas[t]), accumulator) for i in range(y_idxs.size) for
+     t in range(thetas.size)]
+    list = [key for (key, value) in accumulator.items() if value >= threshold]
+    return np.asarray(list)
+
+def HoughTransform(inputfile, outputfile = 'output.png', cannythreshold = 50):
+    dst = cv2.Canny(inputfile, cannythreshold, 200, 3)
+    # opencv implementation
+    #lines = cv2.HoughLines(dst, 1, (np.pi)/180, 100, 30, 0 )[:,0,:]
+
+    # my implementation
+    lines = HoughLines(dst, (np.pi) / 180, 150)
+    show_hough_line(lines,inputfile,dst,outputfile)
+def show_hough_line(lines,inputfile,dst,outputfile):
+    for line in lines:
+        rho = line[0]
+        theta = line[1]
+        a = np.cos(theta)
+        b = np.sin(theta)
+
+        x0 = a * rho
+        y0 = b * rho
+
+        x1 = int(np.round(x0 + 1000 * (-b)))
+        y1 = int(np.round(y0 + 1000 * (a)))
+        x2 = int(np.round(x0 - 1000 * (-b)))
+        y2 = int(np.round(y0 - 1000 * (a)))
+
+        cv2.line(inputfile, (x1, y1), (x2, y2), (0, 255, 0), 3)
+    cv2.imwrite(outputfile, inputfile)
+
+    fig, ax = plt.subplots(1, 2, figsize=(10, 10))
+    ax[0].imshow(dst)
+    ax[0].set_title('Canny image')
+    ax[0].axis('image')
+    ax[1].imshow(inputfile)
+    ax[1].set_title('output Hough transform')
+    ax[1].axis('image')
+    plt.show()
+
+
+
+
+
